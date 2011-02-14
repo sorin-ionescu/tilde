@@ -1,0 +1,31 @@
+#!/bin/bash
+
+if (( $# < 1))
+then
+    echo "ERROR: No archive given."
+    exit 1
+fi
+
+entries=$(tar -tf "$1" | sort -r)
+
+for entry in ${entries[*]}
+do
+	echo $entry
+	if [[ -d "$entry" ]]
+	then
+		if [[ "$entry" == "/" ]]
+		then
+			continue
+		fi
+
+		rmdir "$entry" 2>/dev/null
+		if (( $? != 0 ))
+		then
+			find "$entry" -type l ! -execdir test -e "{}" \; -print0 2>/dev/null | xargs -0 rm 
+			find "$entry" -type f -name ".DS_Store" -exec rm "{}" \;
+			rmdir "$entry" 2>/dev/null
+		fi
+	else
+		rm "$entry" 2>/dev/null
+	fi
+done

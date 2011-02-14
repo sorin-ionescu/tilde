@@ -1,0 +1,91 @@
+#!/bin/bash
+# -----------------------------------------------------------------------------
+#          FILE:  bundlerb
+#   DESCRIPTION:  Bundles a script and dependencies into a single file.
+#        AUTHOR:  Sorin Ionescu <sorin.ionescu@gmail.com>
+#       VERSION:  1.0.0
+# -----------------------------------------------------------------------------
+
+
+TMP="/tmp/$(basename $0)"
+GEMFILES="$(echo ~)/UNIX/share/gemfiles"
+CODE='#!/bin/bash\nTMPDIR="/tmp/$( basename $0 )";mkdir -p $TMPDIR; 
+	uudecode -p $(dirname $0)/$(basename $0) |
+	tar xjf - -C $TMPDIR;ruby -r $TMPDIR/vendor/gems/environment.rb
+	$TMPDIR/main.rb;rt=$?;rm -rf $TMPDIR;exit $rt'
+
+if [ "$#" -lt 1 ]
+then
+	echo "USAGE: $(basename $0) infile [outfile]"
+	exit 1
+fi
+
+if [ "$(gem bundle 2>&1 | grep 'ERROR')" ]
+then
+	echo 'ERROR: Bundler gem not found.'
+	exit 1;
+fi
+
+
+infile=$(basename $1)
+infiledir=$(dirname $1)
+if [ "$infiledir" == "" ] || [ "$infiledir" == "." ]
+then
+	infiledir="$(pwd)"
+fi
+infilepath="$infiledir/$infile"
+if [ ! -e "$infilepath" ]
+then
+	echo "ERROR: File not found."
+	exit 1
+fi
+
+
+outfile=$2
+if [ -z "$outfile" ]
+then
+	outfilepath="$(pwd)/$infile.ruby-$(ruby -e "puts \"#{RUBY_VERSION.split('.')[0,3].join('.')}_#{RUBY_PLATFORM}\"").bundled"
+	outfile=$(basename $outfilepath)
+	outfiledir=$(dirname $outfilepath)
+fi
+if [ "$outfiledir" == "" ] || [ "$outfiledir" == "." ]
+then
+	outfiledir="$(pwd)"
+fi
+outfilepath="$outfiledir/$outfile"
+
+
+gemfile="$GEMFILES/$infile/Gemfile"		
+if [ ! -e "$gemfile" ]
+then
+	echo 'ERROR: Gemfile not found.'
+	exit 1;
+fi
+
+mkdir -p $TMP
+cp $infilepath "$TMP/main.rb"
+cp $gemfile $TMP
+pushd $TMP > /dev/null
+
+echo -e "Bundling $infile.\n"
+gem bundle
+
+if [ "$?" != 0 ]
+then
+	echo -e "\nERROR: Could not bundle $infile."
+	rm -rf $TMP
+	exit $?
+fi
+
+echo -e '\nGenerating wrapper script.'
+echo -e $CODE > $infile.bundled
+echo -e 'Tarring payload.'
+tar cjf payload.tbz *
+chmod ugo+rx $infile.bundled
+echo -e 'Injecting payload.'
+uuencode payload.tbz payload.tbz >> $infile.bundled
+mv -f $infile.bundled $outfilepath
+echo -e 'Done.'
+
+popd > /dev/null
+rm -rf $TMP

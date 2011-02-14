@@ -1,0 +1,53 @@
+#!/bin/bash
+# -----------------------------------------------------------------------------
+#          FILE:  localhost-alias
+#   DESCRIPTION:  Adds/removes localhost aliases.
+#        AUTHOR:  Sorin Ionescu <sorin.ionescu@gmail.com>
+#       VERSION:  1.0.0
+# -----------------------------------------------------------------------------
+
+
+if [[ $1 && $1 == "add" ]] 
+then
+	if [[ $2 ]] 
+	then
+		sudo dscl localhost -create "/Local/Default/Hosts/$2" IPAddress 127.0.0.1
+		sudo dscacheutil -flushcache
+		echo "Hostname $2 now points to localhost."
+	else
+		echo "ERROR: You have to specify a valid hostname alias to add."
+	fi
+	exit
+fi
+
+if [[ $1 && $1 == "remove" ]] 
+then
+	if [[ $2 ]] 
+	then
+		sudo dscl localhost -delete "/Local/Default/Hosts/$2"
+		echo "Hostname $2 no longer points to localhost."
+	else
+		echo "ERROR: You have to specify a valid hostname alias to remove."
+	fi
+	exit
+fi
+
+if [[ $1 && $1 == "list" ]] 
+then
+	dscl localhost -list "/Local/Default/Hosts"
+	exit
+fi
+
+if [[ $1 && $1 == "cache" ]] 
+then
+	dscacheutil -cachedump -entries Host
+	exit
+fi
+
+echo "usage: $(basename $0) <command> [hostname]"
+echo
+echo "The available commands are:"
+echo "  add       Adds or updates a hostname."
+echo "  remove    Removes a hostname."
+echo "  list      Lists available hostname."
+echo "  cache     Dumps the cached hostnames."

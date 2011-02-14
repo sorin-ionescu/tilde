@@ -1,0 +1,37 @@
+#!/bin/sh
+
+echocmd="/bin/echo -n"
+ctlfile="$HOME/.config/pianobar/ctl"
+icon="$HOME/.config/pianobar/pandora.png"
+
+# pianobar running? echo would block otherwise
+pgrep 'pianobar' > /dev/null
+if (( $? != 0 )); then
+	growlnotify --name "Pianobar" --image "$icon" --title "Pianobar" --message "Not nunning."
+	exit 1
+fi
+
+if [[ ! -p "$ctlfile" ]]; then
+	rm -f "$ctlfile"
+	mkfifo "$ctlfile"
+fi
+
+case "$1" in
+	pp)
+		$echocmd p > $ctlfile
+		;;
+	next)
+		$echocmd n > $ctlfile
+		;;
+	love)
+		$echocmd + > $ctlfile
+		;;
+	ban)
+		$echocmd - > $ctlfile
+		;;
+	*)
+		$echocmd "$1" > $ctlfile
+esac
+
+exit 0
+

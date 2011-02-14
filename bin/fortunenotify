@@ -1,0 +1,14 @@
+#!/bin/bash
+ICON="$(dirname $0)/../share/$(basename $0)/icon.png"
+
+if [ ! -x "$(which  growlnotify)" ]
+then
+  echo "ERROR: growlnotify not found." 
+  exit 1
+fi
+
+while true
+do
+  growlnotify --image $ICON --title "Fortune" --message "$( fortune -a -s )"
+  /bin/sleep 60
+done

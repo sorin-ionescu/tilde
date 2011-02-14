@@ -1,0 +1,47 @@
+#!/bin/bash
+
+IFS=$'\n'
+SED="/usr/bin/sed"
+PKGUTIL="/usr/sbin/pkgutil"
+RECEIPT_DIR="/var/db/receipts"
+PLISTBUDDY="/usr/libexec/PlistBuddy"
+
+pkg=''
+files=''
+find_missing()
+{
+	echo "PAKCKAGE: $pkg"
+	
+	for file in $files
+	do
+		if [[ ! -e "${file}" ]]
+		then
+			echo "${file}"
+		fi
+	done
+	
+	echo
+}
+
+if [[ $# -eq 0 ]]
+then
+	for pkg in $(pkgutil --pkgs)
+	do
+		pkg_plist="$RECEIPT_DIR/$pkg.plist"
+		prefix=$( $PLISTBUDDY -c 'Print :InstallPrefixPath' $pkg_plist )
+		files=$( $PKGUTIL --lsbom $pkg | $SED -e "s:^\.:/$prefix:g" -e "s:/\{2,\}:/:g" )
+		find_missing
+	done
+elif [[ $# -eq 1 ]]
+then
+	query=$1
+	for pkg in $(pkgutil --pkgs)
+	do
+		pkg_plist="$RECEIPT_DIR/$pkg.plist"
+		prefix=$( $PLISTBUDDY -c 'Print :InstallPrefixPath' $pkg_plist )
+		files=$( $PKGUTIL --lsbom $pkg | $SED -e "s:^\.:/$prefix:g" -e "s:^/*:/:g" | grep -i $query )
+		find_missing
+	done
+fi
+
+unset IFS

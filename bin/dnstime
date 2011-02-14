@@ -1,0 +1,72 @@
+#!/bin/bash
+#------------------------------------------------------------------------------
+#          FILE:  dnstime
+#   DESCRIPTION:  Times the speed of DNS servers.
+#        AUTHOR:  Sorin Ionescu <sorin.ionescu@gmail.com>
+#       VERSION:  1.0.0
+#------------------------------------------------------------------------------
+
+
+# The number of most trafficked sites to use. Default: 100
+top_domains=100
+
+dns_servers=(
+	"4.2.2.1" # Level 3
+	"4.2.2.2" # Level 3
+	"4.2.2.3" # Level 3
+	"4.2.2.4" # Level 3
+	"4.2.2.5" # Level 3
+	"4.2.2.6" # Level 3
+	"8.8.8.8" # Google Public DNS
+	"8.8.4.4" # Google Public DNS
+	"208.67.222.222" # OpenDNS
+	"208.67.220.220" # OpenDNS
+)
+
+echo "Downloading Alexa top domains list..."
+curl  -C - "http://s3.amazonaws.com/alexa-static/top-1m.csv.zip" -o /tmp/top-1m.csv.zip &> /dev/null
+
+echo "Extracting Alexa top domains list..."
+unzip -u /tmp/top-1m.csv -d /tmp/ &> /dev/null
+
+domains=( $( cat /tmp/top-1m.csv | cut -d ',' -f 2 | head -n $top_domains ) )
+
+if [[ $(which tabs) != "" ]]
+then
+	tabs -2
+fi
+
+echo "Timing DNS servers..."
+results=""
+
+for dns_server in "${dns_servers[@]}"
+do
+	echo -e "\ttesting ${dns_server}"
+	total_time=0
+	
+	for domain in "${domains[@]}"
+	do
+		sleep 0.1s
+		current_time=$( dig @$dns_server $domain | grep Query | awk -F ":" '{print $2}' | cut -d ' ' -f 2 )
+		
+		if [[ $current_time == "" ]]
+		then
+			# Times out after ~15 seconds.
+			current_time=15000
+			echo -e "\t\t$domain failed"
+		fi
+		
+		total_time=$(( $total_time + $current_time ))
+	done
+	
+	average_time=$(( $total_time / ${#domains[@]} ))
+	results="$results\t$dns_server $average_time msec\n"
+done
+
+echo -n "Results"
+echo -e $results | sort -n -k2
+
+if [[ $(which tabs) != "" ]]
+then
+	tabs -8
+fi

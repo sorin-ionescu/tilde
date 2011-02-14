@@ -1,0 +1,262 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# lsasupdates - Checks the iTunes App Store for updates.
+# Copyright (c) 2009-2010 Sorin Ionescu
+# 
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+# 
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+
+'''Checks the iTunes App Store for updates.'''
+
+__author__ = 'Sorin Ionescu'
+__author_email__ = 'sorin.ionescu@gmail.com'
+__date__ = '2010-09-25'
+__version__ = '1.0.8'
+
+# Changelog
+#
+# 2010-09-25: v1.0.8 Fixed many bugs.
+# 2010-08-27: v1.0.7 Fixed many Pylint errors.
+# 2010-03-12: v1.0.6 Converted to Python from Ruby.
+
+
+# ------------------------------------------------------------------------------
+# Imports
+# ------------------------------------------------------------------------------
+import curses
+import distutils.version
+import json
+import os
+import plistlib
+import progressbar
+import re
+import subprocess
+import sys
+import urllib
+import yaml
+import zipfile
+
+
+# ------------------------------------------------------------------------------
+# Setup
+# ------------------------------------------------------------------------------
+APPS_DIR_PATH_NEW = os.path.expanduser(
+    u'~/Music/iTunes/iTunes Music/Mobile Applications')
+APPS_DIR_PATH_OLD = os.path.expanduser(u'~/Music/iTunes/Mobile Applications')
+SEARCH_ASSISTANCE_FILE_PATH_SHARED = os.path.expanduser(
+    u'~/.local/share/{0}/search_assistance.yaml'.format(
+        os.path.basename(__file__)))
+SEARCH_ASSISTANCE_FILE_PATH_RELATIVE = u'{0}.yelp'.format(__file__)
+METADATA_FILE_NAME = 'iTunesMetadata.plist'
+PLUTIL_COMMAND = ['plutil', '-convert', 'xml1', '-', '-o', '-']
+
+if os.path.exists(APPS_DIR_PATH_NEW):
+    APPS_DIR_PATH = APPS_DIR_PATH_NEW 
+else:
+    APPS_DIR_PATH = APPS_DIR_PATH_OLD
+
+if os.path.exists(SEARCH_ASSISTANCE_FILE_PATH_RELATIVE):
+    SEARCH_ASSISTANCE_FILE_PATH = SEARCH_ASSISTANCE_FILE_PATH_RELATIVE
+else:
+    SEARCH_ASSISTANCE_FILE_PATH = SEARCH_ASSISTANCE_FILE_PATH_SHARED
+
+class IPhoneURLopener(urllib.FancyURLopener):
+    '''
+    Makes the iTunes store think that the requests are coming from an iPhone.
+    '''
+    version = 'Mozilla/5.0 (iPhone; U; CPU like Mac OS X; en)' + \
+        ' AppleWebKit/420+ (KHTML, like Gecko) Version/3.0' + \
+        ' Mobile/1A543 Safari/419.3'
+
+urllib._urlopener = IPhoneURLopener()
+curses.setupterm()
+os.chdir(APPS_DIR_PATH)
+
+def convert_to_xml(data):
+    '''Converts binary PList to XML.'''
+    plutil = subprocess.Popen(
+        PLUTIL_COMMAND,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE)
+    return plutil.communicate(input=data)[0]
+
+
+# ------------------------------------------------------------------------------
+# Processing
+# ------------------------------------------------------------------------------
+def load_search_assistance_data():
+    '''Loads the search assistance file.'''
+    search_assistance_data = None
+    try:
+        if os.path.exists(SEARCH_ASSISTANCE_FILE_PATH):
+            search_assistance_file = open(SEARCH_ASSISTANCE_FILE_PATH, 'r')
+            search_assistance_data = yaml.load(search_assistance_file.read())
+            search_assistance_file.close()
+    except yaml.scanner.ScannerError:
+        print('ERROR: Search assistance file is invalid.')
+    return search_assistance_data
+
+def read_search_assitance_data(search_assistance_data, query):
+    '''Reads the search assistance file.'''
+    publisher, name, version_installed = None, None, None
+    if search_assistance_data and search_assistance_data.has_key(query):
+        search_assistance = search_assistance_data[query]
+        if search_assistance.has_key('publisher'):
+            publisher = search_assistance['publisher']
+        if search_assistance.has_key('name'):
+            name = search_assistance['name']
+        if search_assistance.has_key('version'):
+            version_installed = search_assistance['version']
+    return publisher, name, version_installed
+
+def read_metadata_file(app_file):
+    '''Reads IPA Metadata.plist file.'''
+    item_id, publisher, name = None, None, None
+    if app_file and (METADATA_FILE_NAME in app_file.namelist()):
+        metadata_file = app_file.open(METADATA_FILE_NAME)
+        plist = plistlib.readPlistFromString(
+            convert_to_xml(metadata_file.read()))
+        if plist.has_key('itemId'): 
+            item_id = plist['itemId']
+        if plist.has_key('publisher'): 
+            publisher = plist['artistName']
+        if plist.has_key('itemName'):
+            name = plist['itemName']
+        metadata_file.close()
+    return item_id, publisher, name
+
+def read_info_file(app_file):
+    '''Reads IPA Info.plist file.'''
+    publisher, name, version_installed = None, None, None
+    if app_file:
+        for file_name in app_file.namelist():
+            if not re.match(r'^Payload\/.*\.app\/Info\.plist$', file_name):
+                continue
+            info_file = app_file.open(file_name)
+            plist = plistlib.readPlistFromString(
+                convert_to_xml(info_file.read()))
+            if plist.has_key('CFBundleDisplayName'):
+                publisher = plist['CFBundleDisplayName']
+                name = plist['CFBundleDisplayName']
+            if plist.has_key('CFBundleName'):
+                if not publisher:
+                    publisher = plist['CFBundleName']
+                if not name:
+                    name = plist['CFBundleName']
+            if plist.has_key('CFBundleShortVersionString'):
+                version_installed = plist['CFBundleShortVersionString']
+            if plist.has_key('CFBundleVersion'):
+                if not version_installed:
+                    version_installed = plist['CFBundleVersion']
+            info_file.close()
+            break
+    return publisher, name, version_installed
+
+def scrape_available_version(item_id, name):
+    '''Scrapes the available version in the iTunes App Store of an app.'''
+    if item_id:
+        url = 'http://ax.phobos.apple.com.edgesuite.net/WebObjects/' + \
+            'MZStoreServices.woa/wa/wsLookup?id={0}'.format(item_id)
+    else:
+        url = 'http://ax.phobos.apple.com.edgesuite.net/WebObjects/' + \
+            'MZStoreServices.woa/wa/wsSearch?attribute=' + \
+            'completeTitle&entity=software&term={0})'.format(
+                urllib.quote(name))
+    scrape = json.load(urllib.urlopen(url))
+    return scrape[u'results'][0][u'version']
+
+def format_output(
+    output, publisher, name,
+    version_installed_string, version_available_string):
+    '''Formats the output of this script.'''
+    try:
+        version_installed = \
+            distutils.version.StrictVersion(version_installed_string)
+        version_available = \
+            distutils.version.StrictVersion(version_available_string)
+    except (ValueError): 
+        version_installed = \
+            distutils.version.LooseVersion(version_installed_string)
+        version_available = \
+            distutils.version.LooseVersion(version_available_string)
+    if version_installed == version_available:
+        return output
+    output = u'{0}Publisher:            {1}\n'.format(output, unicode(publisher))
+    output = u'{0}Application:          {1}\n'.format(output, unicode(name))
+    output = u'{0}Installed Version:    {1}\n'.format(output, unicode(version_installed))
+    if version_installed > version_available:
+        output_version = u'{0}Available Version:    {1} (ERROR)\n\n'
+    else:
+        output_version = u'{0}Available Version:    {1}\n\n'
+    output = output_version.format(output, version_available)
+    return output
+
+def main():
+    '''Checks iTunes App Store for available updates.'''
+    print('\n' + ('iTunes App Store Updates Check').center(80) + '\n')
+    app_file_names = \
+        [app_file_name for app_file_name in os.listdir(APPS_DIR_PATH) \
+            if re.match(r'.*\.ipa$', app_file_name, re.I)]
+    app_file_index = 0
+    output = ''
+    search_assistance_data = load_search_assistance_data() 
+    progress_bar = progressbar.ProgressBar(
+        maxval = len(app_file_names),
+        widgets = [
+            progressbar.Percentage(), ' ',
+            progressbar.Bar(marker=u'#'), ' ',
+            progressbar.ETA()])
+    for app_file_name in app_file_names:
+        app_file_index += 1
+        try:
+            app_file = zipfile.ZipFile(app_file_name, 'r')
+            meta = read_metadata_file(app_file)
+            info = read_info_file(app_file)
+            name = meta[2] or info[1]
+            search_assistance = read_search_assitance_data(
+                search_assistance_data, name)
+            item_id = meta[0]
+            publisher = search_assistance[0] or meta[1] or info[0] 
+            name = search_assistance[1] or name 
+            version_installed = search_assistance[2] or info[2]
+        except (IOError, IndexError):
+            continue
+        finally:
+            app_file.close()
+        sys.stdout.write(curses.tigetstr('el'))
+        print(u'Checking: ' + name)
+        sys.stdout.write(curses.tigetstr('cuu1'))
+        progress_bar.update(app_file_index)
+        try:
+            version_available = scrape_available_version(item_id, name)
+        except IndexError:
+            version_available = '0.0.0'
+        except:
+            continue
+        output = format_output(
+            output, publisher, name,
+            str(version_installed), str(version_available))
+    progress_bar.finish()
+    sys.stdout.write(curses.tigetstr('cuu1'))
+    if output == '':
+        print(u'{0}Status: No updates found'.format(curses.tigetstr('el')))
+    if output != '':
+        print(u'{0}Status: Updates found'.format(curses.tigetstr('el')))
+    print(u'\n\n{0}'.format(output))
+
+if __name__ == '__main__':
+    main()
+

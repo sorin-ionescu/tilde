@@ -1,0 +1,70 @@
+#!/bin/bash
+
+export PATH=/usr/libexec:$PATH
+if [ ! -f "$1" ] || [ ! $( echo "$1" | grep "\.ipsw$" ) ];
+then
+	echo "ERROR: '$1' is not a valid firmware file."
+	exit 1
+fi
+
+firmware_name=$( echo "$1" | sed 's/.ipsw$//' )
+
+if [ ! -f "${firmware_name}.decrypt" ];
+then
+	echo "ERROR: Decryption info file '${firmware_name}.decrypt' not found."
+	exit 1
+fi
+
+root_filesystem=$( PlistBuddy -c "Print :RootFilesystem" "${firmware_name}.decrypt" )
+root_filesystem_key=$( PlistBuddy -c "Print :RootFilesystemKey" "${firmware_name}.decrypt" )
+root_filesystem_mount_volume=$( PlistBuddy -c "Print :RootFilesystemMountVolume" "${firmware_name}.decrypt" )
+
+restore_ramdisk=$( PlistBuddy -c "Print :'Restore Ramdisk':File" "${firmware_name}.decrypt" )
+restore_ramdisk_iv=$( PlistBuddy -c "Print :'Restore Ramdisk':IV" "${firmware_name}.decrypt" )
+restore_ramdisk_key=$( PlistBuddy -c "Print :'Restore Ramdisk':Key" "${firmware_name}.decrypt" )
+restore_ramdisk_mount_volume=$(PlistBuddy -c "Print :'Restore Ramdisk':MountVolume" "${firmware_name}.decrypt" )
+
+update_ramdisk=$( PlistBuddy -c "Print :'Update Ramdisk':File" "${firmware_name}.decrypt" )
+update_ramdisk_iv=$( PlistBuddy -c "Print :'Update Ramdisk':IV" "${firmware_name}.decrypt" )
+update_ramdisk_key=$( PlistBuddy -c "Print :'Update Ramdisk':Key" "${firmware_name}.decrypt" )
+update_ramdisk_mount_volume=$( PlistBuddy -c "Print :'Update Ramdisk':MountVolume" "${firmware_name}.decrypt" )
+
+root_filesystem_name=$(echo "$root_filesystem" | sed 's/.dmg//')
+restore_ramdisk_name=$(echo "$restore_ramdisk" | sed 's/.dmg//')
+update_ramdisk_name=$(echo "$update_ramdisk" | sed 's/.dmg//')
+
+rm -rf "$firmware_name"
+mkdir -p "$firmware_name"
+cd $firmware_name
+
+echo "Extracting..."
+unzip -qq -o "../${firmware_name}.ipsw"
+
+echo "Decrypting..."
+vfdecrypt -i "$root_filesystem" -k "$root_filesystem_key" -o "${root_filesystem_name}_decrypted.dmg" &> /dev/null
+decodeimg3 -l "$restore_ramdisk" -o "${restore_ramdisk_name}_decrypted.dmg" -k "$restore_ramdisk_key" -iv "$restore_ramdisk_iv" &> /dev/null
+decodeimg3 -l "$update_ramdisk" -o "${update_ramdisk_name}_decrypted.dmg" -k "$update_ramdisk_key" -iv "$update_ramdisk_iv" &> /dev/null
+
+echo "Copying..."
+hdiutil attach -quiet "${root_filesystem_name}_decrypted.dmg"
+cp -Rf "/Volumes/${root_filesystem_mount_volume}" "root_${root_filesystem_name}" 2>/dev/null
+hdiutil detach -quiet "/Volumes/${root_filesystem_mount_volume}"
+
+hdiutil attach -quiet "${restore_ramdisk_name}_decrypted.dmg"
+cp -Rf "/Volumes/${restore_ramdisk_mount_volume}" "restore_${restore_ramdisk_name}" 2>/dev/null
+hdiutil detach -quiet "/Volumes/${restore_ramdisk_mount_volume}"
+
+hdiutil attach -quiet "${update_ramdisk_name}_decrypted.dmg"
+cp -Rf "/Volumes/${update_ramdisk_mount_volume}" "update_${update_ramdisk_name}" 2>/dev/null
+hdiutil detach -quiet "/Volumes/${update_ramdisk_mount_volume}"
+
+echo "Cleaning up..."
+rm -f "$root_filesystem"
+rm -f "${root_filesystem_name}_decrypted.dmg"
+rm -f "$restore_ramdisk"
+rm -f "${restore_ramdisk_name}_decrypted.dmg"
+rm -f "$update_ramdisk"
+rm -f "${update_ramdisk_name}_decrypted.dmg"
+
+echo "Done."
+exit 0

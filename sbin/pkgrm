@@ -1,0 +1,71 @@
+#!/bin/bash
+ 
+IFS=$'\n'
+RM="/bin/rm"
+RMDIR="/bin/rmdir"
+SED="/usr/bin/sed"
+SORT="/usr/bin/sort"
+PKGUTIL="/usr/sbin/pkgutil"
+RECEIPT="$1"
+RECEIPT_DIR="/var/db/receipts"
+RECEIPT_PLIST="$RECEIPT_DIR/$RECEIPT.plist"
+PLISTBUDDY="/usr/libexec/PlistBuddy"
+
+function ask()
+{
+	echo -ne "$@" '[y/n] '
+	read ans
+	case "$ans" in
+		y*|Y*)
+			return 0
+			;;
+		*)
+			return 1
+			;;
+	esac
+}
+
+if [ "$(id -u)" != "0" ]
+then
+   echo "ERROR: This script must be run as root." 1>&2
+   exit 1
+fi
+
+if [ ! -e "$RECEIPT_PLIST"  ]
+then
+	echo ERROR: $RECEIPT not found.
+	exit 1
+fi
+
+ask "Are you sure that you want to uninstall ${RECEIPT}?"
+if [ "$?" -ne 0 ]
+then
+	exit 1
+fi
+
+PREFIX=$( $PLISTBUDDY -c 'Print :InstallPrefixPath' $RECEIPT_PLIST )
+ENTRIES=$( $PKGUTIL --lsbom $RECEIPT | $SED -e "s:^\.:/$PREFIX:g" -e "s:/\{2,\}:/:g" | $SORT -r )
+
+for entry in ${ENTRIES[*]}
+do
+	if [ -d "$entry" ]
+	then
+		if [ "$entry" == "/" ]
+		then
+			continue
+		fi
+
+		$RMDIR "$entry" 2>/dev/null
+		if [ "$?" -ne 0 ]
+		then
+			find "$entry" -type l ! -execdir test -e "{}" \; -print0 2>/dev/null | xargs -0 $RM 
+			find "$entry" -type f -name ".DS_Store" -exec $RM "{}" \;
+			$RMDIR "$entry" 2>/dev/null
+		fi
+	else
+		$RM "$entry" 2>/dev/null
+	fi
+done
+
+$PKGUTIL --forget $RECEIPT &>/dev/null
+unset IFS

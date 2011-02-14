@@ -1,0 +1,33 @@
+#!/bin/sh
+# Shell script scripts to read ip address
+# -------------------------------------------------------------------------
+# Copyright (c) 2005 nixCraft project <http://cyberciti.biz/fb/>
+# This script is licensed under GNU GPL version 2.0 or above
+# -------------------------------------------------------------------------
+# This script is part of nixCraft shell script collection (NSSC)
+# Visit http://bash.cyberciti.biz/ for more information.
+# -------------------------------------------------------------------------
+
+OS=`uname`
+case $OS in
+    Linux)
+        IP=`ifconfig  | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}'`
+        WANIP=`wget -q -O - checkip.dyndns.org|sed -e 's/.*Current IP Address: //' -e 's/<.*$//'`
+        ;;
+   FreeBSD|OpenBSD|Darwin)
+        IP=`ifconfig  | grep -E 'inet.[0-9]' | grep -v '127.0.0.1' | awk '{ print $2}'`
+        WANIP=`curl checkip.dyndns.org 2>/dev/null | sed -e 's/.*Current IP Address: //' -e 's/<.*$//'`
+        ;;
+    SunOS)
+        IP=`ifconfig -a | grep inet | grep -v '127.0.0.1' | awk '{ print $2} '`
+        WANIP=`curl checkip.dyndns.org 2>/dev/null | sed -e 's/.*Current IP Address: //' -e 's/<.*$//'`
+        ;;
+    *)
+        IP="Unknown"
+        WANIP="Unknown"
+        ;;
+esac
+
+echo "LAN: $IP"
+echo "WAN: $WANIP"
+

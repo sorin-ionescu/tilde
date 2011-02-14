@@ -1,0 +1,20 @@
+#!/bin/bash
+
+IFS=$'\n'
+SED="/usr/bin/sed"
+PKGUTIL="/usr/sbin/pkgutil"
+RECEIPT_DIR="/var/db/receipts"
+PLISTBUDDY="/usr/libexec/PlistBuddy"
+
+pkg="$@"
+pkg_plist="$RECEIPT_DIR/$pkg.plist"
+
+if [ ! -e "$pkg_plist" ]
+then
+	echo "ERROR: Package '$@' not found."
+	exit 1
+fi
+
+prefix=$( $PLISTBUDDY -c 'Print :InstallPrefixPath' $pkg_plist )
+$PKGUTIL --lsbom $pkg | $SED -e "s:^\.:/$prefix:g" -e "s:/\{2,\}:/:g"
+unset IFS
