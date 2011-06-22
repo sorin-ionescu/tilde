@@ -8,15 +8,15 @@
 #------------------------------------------------------------------------------
 
 
-DISK_IMAGE_MD5="150f262c68147d7efac77e9517efd115"
+DISK_IMAGE_MD5="d86d9eff04a699795467c9f269d9395d"
 LAUNCHER_MD5="dee6b4dfcdf2179f264e950e7b0d60ad"
-DISK_IMAGE_NAME="Safari4.0BetaLeo.dmg"
-DISK_IMAGE_VOLUME_NAME="Safari 4 (Manual) (Leo)"
+DISK_IMAGE_NAME="safari_5.1_developer_preview_snow_leopard.dmg"
+DISK_IMAGE_VOLUME_NAME="Safari 5.1 for Snow Leopard"
 LAUNCHER_NAME="WebKitLauncher.zip"
-DISK_IMAGE_DOWNLOAD_URL="http://appldnld.apple.com.edgesuite.net/content.info.apple.com/Safari4/061-4669.20090224.lpsaf/${DISK_IMAGE_NAME}"
-LAUNCHER_DOWNLOAD_URL="http://vasi.dyndns.org:3128/svn/SafariBeta/${LAUNCHER_NAME}"
-DISK_IMAGE_MOUNTED_PATH="/Volumes/Safari 4 (Manual) (Leo)"
-PACKAGE_NAME="Safari4.0BetaLeo.pkg"
+DISK_IMAGE_DOWNLOAD_URL="http://adcdownload.apple.com/internet_and_web/safari_5.1_developer_preview/${DISK_IMAGE_NAME}"
+LAUNCHER_DOWNLOAD_URL="http://vasi.dyndns.org:3130/svn/SafariBeta/${LAUNCHER_NAME}"
+DISK_IMAGE_MOUNTED_PATH="/Volumes/Safari 5.1 for Snow Leopard"
+PACKAGE_NAME="Safari5.1SnowLeopard.pkg"
 PACKAGE_PATH="${DISK_IMAGE_MOUNTED_PATH}/${PACKAGE_NAME}"
 
 function cleanup()

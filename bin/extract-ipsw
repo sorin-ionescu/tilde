@@ -8,7 +8,6 @@ then
 fi
 
 firmware_name=$( echo "$1" | sed 's/.ipsw$//' )
-
 if [ ! -f "${firmware_name}.decrypt" ];
 then
 	echo "ERROR: Decryption info file '${firmware_name}.decrypt' not found."
