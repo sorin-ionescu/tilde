@@ -3,17 +3,17 @@
 #
 # lsasupdates - Checks the iTunes App Store for updates.
 # Copyright (c) 2009-2010 Sorin Ionescu
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
 # License as published by the Free Software Foundation; either
 # version 2.1 of the License, or (at your option) any later version.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
@@ -57,14 +57,15 @@ APPS_DIR_PATH_NEW = os.path.expanduser(
     u'~/Music/iTunes/iTunes Music/Mobile Applications')
 APPS_DIR_PATH_OLD = os.path.expanduser(u'~/Music/iTunes/Mobile Applications')
 SEARCH_ASSISTANCE_FILE_PATH_SHARED = os.path.expanduser(
-    u'~/.local/share/{0}/search_assistance.yaml'.format(
+    u'{0}/share/{1}/search_assistance.yaml'.format(
+        os.path.dirname(os.path.dirname(__file__)),
         os.path.basename(__file__)))
 SEARCH_ASSISTANCE_FILE_PATH_RELATIVE = u'{0}.yelp'.format(__file__)
 METADATA_FILE_NAME = 'iTunesMetadata.plist'
 PLUTIL_COMMAND = ['plutil', '-convert', 'xml1', '-', '-o', '-']
 
 if os.path.exists(APPS_DIR_PATH_NEW):
-    APPS_DIR_PATH = APPS_DIR_PATH_NEW 
+    APPS_DIR_PATH = APPS_DIR_PATH_NEW
 else:
     APPS_DIR_PATH = APPS_DIR_PATH_OLD
 
@@ -129,9 +130,9 @@ def read_metadata_file(app_file):
         metadata_file = app_file.open(METADATA_FILE_NAME)
         plist = plistlib.readPlistFromString(
             convert_to_xml(metadata_file.read()))
-        if plist.has_key('itemId'): 
+        if plist.has_key('itemId'):
             item_id = plist['itemId']
-        if plist.has_key('publisher'): 
+        if plist.has_key('publisher'):
             publisher = plist['artistName']
         if plist.has_key('itemName'):
             name = plist['itemName']
@@ -187,7 +188,7 @@ def format_output(
             distutils.version.StrictVersion(version_installed_string)
         version_available = \
             distutils.version.StrictVersion(version_available_string)
-    except (ValueError): 
+    except (ValueError):
         version_installed = \
             distutils.version.LooseVersion(version_installed_string)
         version_available = \
@@ -212,7 +213,7 @@ def main():
             if re.match(r'.*\.ipa$', app_file_name, re.I)]
     app_file_index = 0
     output = ''
-    search_assistance_data = load_search_assistance_data() 
+    search_assistance_data = load_search_assistance_data()
     progress_bar = progressbar.ProgressBar(
         maxval = len(app_file_names),
         widgets = [
@@ -229,8 +230,8 @@ def main():
             search_assistance = read_search_assitance_data(
                 search_assistance_data, name)
             item_id = meta[0]
-            publisher = search_assistance[0] or meta[1] or info[0] 
-            name = search_assistance[1] or name 
+            publisher = search_assistance[0] or meta[1] or info[0]
+            name = search_assistance[1] or name
             version_installed = search_assistance[2] or info[2]
         except (IOError, IndexError):
             continue
