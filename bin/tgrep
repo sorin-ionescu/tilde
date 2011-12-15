@@ -1,0 +1,12 @@
+#!/bin/sh
+search="$1"
+archive="$2"
+xzcat "${archive}" | tar -tf - | while read filename; do
+  xzcat "${archive}" \
+    | tar -xOf - "${filename}" \
+    | grep -iP "${search}" &> /dev/null
+  if [[ $? -eq 0 ]]; then
+    echo "${filename}"
+  fi
+done
+
