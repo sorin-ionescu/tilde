@@ -1,0 +1,3 @@
+[submodule "opt"]
+	path = opt
+	url = https://github.com/sorin-ionescu/homebrew.git
