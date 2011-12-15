@@ -1,2 +1,0 @@
-#!/bin/sh
-open -a "QuickTime Player" "$@"
