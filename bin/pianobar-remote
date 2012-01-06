@@ -1,37 +1,57 @@
-#!/bin/sh
+#!/bin/bash
 
-echocmd="/bin/echo -n"
-ctlfile="$HOME/.config/pianobar/ctl"
-icon="$HOME/.config/pianobar/pandora.png"
+ctl="$HOME/.config/pianobar/ctl"
+icon="icon.png"
 
-# pianobar running? echo would block otherwise
-pgrep 'pianobar' > /dev/null
-if (( $? != 0 )); then
-	growlnotify --name "Pianobar" --image "$icon" --title "Pianobar" --message "Not nunning."
+if ! which 'pgrep' > /dev/null; then
+	pgrep() {
+		result=$(ps -acxo pid,command | grep -i "$@" | awk '{ print $1 }')
+		if [[ -n "$result" ]]; then
+			echo "$result"
+			return 0
+		else
+			return 1
+		fi
+	}
+fi
+
+if ! which 'pianobar' > /dev/null; then
+	growlnotify --name "Pianobar" --image "$icon" --title "Pianobar" --message "Not installed"
 	exit 1
 fi
 
-if [[ ! -p "$ctlfile" ]]; then
-	rm -f "$ctlfile"
-	mkfifo "$ctlfile"
+if ! pgrep 'pianobar' > /dev/null; then
+	growlnotify --name "Pianobar" --image "$icon" --title "Pianobar" --message "Not nunning"
+	exit 1
+fi
+
+if [[ ! -p "$ctl" ]]; then
+	rm -f "$ctl"
+	mkfifo "$ctl"
 fi
 
 case "$1" in
-	pp)
-		$echocmd p > $ctlfile
-		;;
-	next)
-		$echocmd n > $ctlfile
-		;;
-	love)
-		$echocmd + > $ctlfile
-		;;
-	ban)
-		$echocmd - > $ctlfile
-		;;
-	*)
-		$echocmd "$1" > $ctlfile
+	(play|pause|pp|p)
+		cmd='p'
+	;;
+	(next|n)
+		cmd='n'
+	;;
+	(love|\+)
+		cmd='+'
+	;;
+	(ban|\-)
+		cmd='-'
+	;;
+	(tired|t)
+		cmd='t'
+	;;
+	(*)
+		cmd="$1"
+	;;
 esac
+
+/bin/echo -n "$cmd" > "$ctl"
 
 exit 0
 
