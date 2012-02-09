@@ -1,8 +1,10 @@
 #!/bin/bash
+
 path='.'
 [ -n "$1" ] && path="$1"
 find "$path" -depth 1 -type l -delete
 find "$path" -depth 1 -type d -name "*.bundle" -print0 | xargs -0 -n1 -I"{}" bash -c 'mv -v -f "{}" "$(basename "{}" .bundle)"'
-find "$path" -type f \( -name "*.plist" -o -name "*.strings" \) -print0 | xargs -0 -n1 plutil -convert xml1
+find "$path" -type f \( -name "*.plist" -o -name "*.strings" -o -name "*.pri" \) -print0 | xargs -0 -n1 plutil -convert xml1
 find "$path" -type f -name '*.png' -print0 | xargs -0 -n1 ipng2png
 find "$path" -type f -name "*-Decoded.png" -print0 | xargs -0 -n1 -I"{}" bash -c 'mv -v -f "{}" "$(echo "{}" | sed "s/-Decoded//g")"'
+
