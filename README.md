@@ -1,6 +1,9 @@
-# Scripts
+# Tilde
 
-This repository is a selection of the scripts and programs I store in *~/.local. Some were written by me while others were downloaded off the Internet and written by others. Be aware that I use Mac OS X and some scripts are Mac OS X only. Big binaries were omitted due to size.
+This repository is a selection of the scripts, programs, and dot files I store
+in *~/.tilde*. Some were written by me while others were downloaded off the
+Internet and written by others. Be aware that I use Mac OS X and some scripts
+are Mac OS X only. Big binaries were omitted due to size.
 
 Executable                 | Description
 -------------------------- | -----------
@@ -11,7 +14,7 @@ decodeimg                  | Decodes the img3 file format.
 dnstime                    | Benchmarks various DNS services with Alexa top domains.
 extract-ipsw               | Extract iOS firmwares.
 fortunenotify              | Sends fortunes to Growl via growlnotify.
-fplay                      | Find music file and play them. 
+fplay                      | Find music file and play them.
 install-safari-beta        | Instals Safari 4 beta.
 ip                         | Print LAN/WAN IP address.
 ipng2png                   | Convert iPhone PNGs to regular PNGs.
