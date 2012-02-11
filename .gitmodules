@@ -1,3 +1,6 @@
 [submodule "opt"]
 	path = opt
 	url = https://github.com/sorin-ionescu/homebrew.git
+[submodule "dot"]
+	path = dot
+	url = https://github.com/sorin-ionescu/dot-files.git
