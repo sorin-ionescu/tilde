@@ -14,19 +14,19 @@ then
 	exit 1
 fi
 
-root_filesystem=$( PlistBuddy -c "Print :RootFilesystem" "${firmware_name}.decrypt" )
-root_filesystem_key=$( PlistBuddy -c "Print :RootFilesystemKey" "${firmware_name}.decrypt" )
-root_filesystem_mount_volume=$( PlistBuddy -c "Print :RootFilesystemMountVolume" "${firmware_name}.decrypt" )
+root_filesystem=$( PlistBuddy -c "Print :RootFilesystem" "${firmware_name}.decrypt" 2>/dev/null )
+root_filesystem_key=$( PlistBuddy -c "Print :RootFilesystemKey" "${firmware_name}.decrypt" 2>/dev/null )
+root_filesystem_mount_volume=$( PlistBuddy -c "Print :RootFilesystemMountVolume" "${firmware_name}.decrypt" 2>/dev/null )
 
-restore_ramdisk=$( PlistBuddy -c "Print :'Restore Ramdisk':File" "${firmware_name}.decrypt" )
-restore_ramdisk_iv=$( PlistBuddy -c "Print :'Restore Ramdisk':IV" "${firmware_name}.decrypt" )
-restore_ramdisk_key=$( PlistBuddy -c "Print :'Restore Ramdisk':Key" "${firmware_name}.decrypt" )
-restore_ramdisk_mount_volume=$(PlistBuddy -c "Print :'Restore Ramdisk':MountVolume" "${firmware_name}.decrypt" )
+restore_ramdisk=$( PlistBuddy -c "Print :'Restore Ramdisk':File" "${firmware_name}.decrypt" 2>/dev/null )
+restore_ramdisk_iv=$( PlistBuddy -c "Print :'Restore Ramdisk':IV" "${firmware_name}.decrypt" 2>/dev/null )
+restore_ramdisk_key=$( PlistBuddy -c "Print :'Restore Ramdisk':Key" "${firmware_name}.decrypt" 2>/dev/null )
+restore_ramdisk_mount_volume=$(PlistBuddy -c "Print :'Restore Ramdisk':MountVolume" "${firmware_name}.decrypt" 2>/dev/null )
 
-update_ramdisk=$( PlistBuddy -c "Print :'Update Ramdisk':File" "${firmware_name}.decrypt" )
-update_ramdisk_iv=$( PlistBuddy -c "Print :'Update Ramdisk':IV" "${firmware_name}.decrypt" )
-update_ramdisk_key=$( PlistBuddy -c "Print :'Update Ramdisk':Key" "${firmware_name}.decrypt" )
-update_ramdisk_mount_volume=$( PlistBuddy -c "Print :'Update Ramdisk':MountVolume" "${firmware_name}.decrypt" )
+update_ramdisk=$( PlistBuddy -c "Print :'Update Ramdisk':File" "${firmware_name}.decrypt" 2>/dev/null )
+update_ramdisk_iv=$( PlistBuddy -c "Print :'Update Ramdisk':IV" "${firmware_name}.decrypt" 2>/dev/null )
+update_ramdisk_key=$( PlistBuddy -c "Print :'Update Ramdisk':Key" "${firmware_name}.decrypt" 2>/dev/null )
+update_ramdisk_mount_volume=$( PlistBuddy -c "Print :'Update Ramdisk':MountVolume" "${firmware_name}.decrypt" 2>/dev/null )
 
 root_filesystem_name=$(echo "$root_filesystem" | sed 's/.dmg//')
 restore_ramdisk_name=$(echo "$restore_ramdisk" | sed 's/.dmg//')
